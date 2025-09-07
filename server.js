@@ -26,6 +26,11 @@ const otpStore = {};
 app.use(cors());
 app.use(express.json());
 
+// Endpoint to serve the front-end file
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // Endpoint to send an OTP to a phone number
 app.post('/api/send-otp', async (req, res) => {
     const { phone } = req.body;
