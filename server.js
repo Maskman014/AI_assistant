@@ -1,68 +1,55 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const path = require("path");
-const cors = require("cors");
-
+const express = require('express');
+const path = require('path');
 const app = express();
-const PORT = process.env.PORT || 5000;
+const port = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
-
-// Serve the entire project directory as a static folder.
-// This is the most reliable way to serve index.html and other files.
-app.use(express.static(path.join(__dirname)));
-
-// Doctor database
+// Doctors data
 const doctors = [
-  { department: "Cardiology", keywords: ["heart", "chest pain", "cardio"], doctor: "Dr. Sharma", contact: "+91-11111-11111", room: "Room 101" },
-  { department: "Pulmonology", keywords: ["cough", "breath", "asthma", "lungs"], doctor: "Dr. Singh", contact: "+91-22222-22222", room: "Room 102" },
-  { department: "Dermatology", keywords: ["skin", "rash", "itch", "acne"], doctor: "Dr. Patel", contact: "+91-33333-33333", room: "Room 201" },
-  { department: "Orthopedics", keywords: ["bone", "joint", "fracture", "back pain"], doctor: "Dr. Mehta", contact: "+91-44444-44444", room: "Room 202" },
-  { department: "ENT", keywords: ["ear", "nose", "throat", "sinus"], doctor: "Dr. Gupta", contact: "+91-55555-55555", room: "Room 301" },
-  { department: "Ophthalmology", keywords: ["eye", "vision", "sight"], doctor: "Dr. Reddy", contact: "+91-66666-66666", room: "Room 302" },
-  { department: "Gastroenterology", keywords: ["stomach", "abdomen", "digestion"], doctor: "Dr. Iyer", contact: "+91-77777-77777", room: "Room 401" },
-  { department: "General Physician", keywords: [], doctor: "Dr. Nair", contact: "+91-88888-88888", room: "Room 402" }
+    { department: 'Cardiology', doctor: 'Dr. Emily Carter', contact: '0987654321', room: 'C-201', keywords: ['heart', 'cardiac', 'chest', 'circulation'] },
+    { department: 'Dermatology', doctor: 'Dr. Alex Johnson', contact: '1234567890', room: 'D-302', keywords: ['skin', 'rash', 'acne', 'dermatitis'] },
+    { department: 'Neurology', doctor: 'Dr. Sarah Patel', contact: '2345678901', room: 'N-405', keywords: ['headache', 'migraine', 'nerve', 'brain'] },
+    { department: 'Orthopedics', doctor: 'Dr. Michael Chen', contact: '3456789012', room: 'O-110', keywords: ['bone', 'joint', 'fracture', 'sprain'] },
+    { department: 'Pediatrics', doctor: 'Dr. Jessica Lee', contact: '4567890123', room: 'P-222', keywords: ['child', 'pediatric', 'kid', 'infant'] },
+    { department: 'Gastroenterology', doctor: 'Dr. James Rodriguez', contact: '5678901234', room: 'G-501', keywords: ['stomach', 'digestive', 'gastro', 'intestine'] },
+    { department: 'General Practice', doctor: 'Dr. David Kim', contact: '6789012345', room: 'GP-101', keywords: ['fever', 'cold', 'flu', 'general', 'cough'] }
 ];
 
-// Match symptoms to department/doctor
-function matchDoctor(issue) {
-  if (!issue) return doctors.find(d => d.department === "General Physician");
-  const text = issue.toLowerCase();
+// Middleware to parse JSON bodies
+app.use(express.json());
 
-  for (const doc of doctors) {
-    if (doc.keywords.some(k => text.includes(k))) {
-      return doc;
-    }
-  }
-  return doctors.find(d => d.department === "General Physician");
-}
-
-// API route
-app.post("/api/book", (req, res) => {
-  const { name, issue, date } = req.body;
-
-  if (!name || !issue || !date) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  const doctor = matchDoctor(issue);
-
-  const appointment = {
-    name,
-    issue,
-    date,
-    doctor: doctor.doctor,
-    department: doctor.department,
-    contact: doctor.contact,
-    room: doctor.room
-  };
-
-  res.json({ appointment });
+// Serve the HTML file for the root URL
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+// Endpoint for booking an appointment
+app.post('/api/book', (req, res) => {
+    const { name, issue, date } = req.body;
+
+    if (!name || !issue || !date) {
+        return res.status(400).json({ error: 'Missing required fields: name, issue, or date' });
+    }
+
+    const lowerCaseIssue = issue.toLowerCase();
+    const assignedDoctor = doctors.find(d => d.keywords.some(keyword => lowerCaseIssue.includes(keyword))) || doctors.find(d => d.department === 'General Practice');
+
+    const appointment = {
+        name,
+        issue,
+        date,
+        department: assignedDoctor.department,
+        doctor: assignedDoctor.doctor,
+        contact: assignedDoctor.contact,
+        room: assignedDoctor.room
+    };
+
+    res.status(200).json({
+        message: 'Appointment booked successfully',
+        appointment: appointment
+    });
+});
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
 });
