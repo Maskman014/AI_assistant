@@ -1,15 +1,14 @@
 {
-  "name": "hospital-booking",
+  "name": "hospital-appointment-server",
   "version": "1.0.0",
-  "description": "Hospital appointment booking app",
+  "description": "A Node.js server for hospital appointment OTP and booking.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
-    "path": "^0.12.7"
+    "express": "^4.18.2",
+    "twilio": "^4.20.0"
   }
 }

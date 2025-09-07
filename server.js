@@ -1,55 +1,65 @@
+// This file sets up a simple Express.js server to handle OTP generation and sending.
+//
+// To run this server, you'll need to install the required packages:
+// npm install express twilio cors
+
 const express = require('express');
+const twilio = require('twilio');
+const cors = require('cors');
 const path = require('path');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Doctors data
-const doctors = [
-    { department: 'Cardiology', doctor: 'Dr. Emily Carter', contact: '0987654321', room: 'C-201', keywords: ['heart', 'cardiac', 'chest', 'circulation'] },
-    { department: 'Dermatology', doctor: 'Dr. Alex Johnson', contact: '1234567890', room: 'D-302', keywords: ['skin', 'rash', 'acne', 'dermatitis'] },
-    { department: 'Neurology', doctor: 'Dr. Sarah Patel', contact: '2345678901', room: 'N-405', keywords: ['headache', 'migraine', 'nerve', 'brain'] },
-    { department: 'Orthopedics', doctor: 'Dr. Michael Chen', contact: '3456789012', room: 'O-110', keywords: ['bone', 'joint', 'fracture', 'sprain'] },
-    { department: 'Pediatrics', doctor: 'Dr. Jessica Lee', contact: '4567890123', room: 'P-222', keywords: ['child', 'pediatric', 'kid', 'infant'] },
-    { department: 'Gastroenterology', doctor: 'Dr. James Rodriguez', contact: '5678901234', room: 'G-501', keywords: ['stomach', 'digestive', 'gastro', 'intestine'] },
-    { department: 'General Practice', doctor: 'Dr. David Kim', contact: '6789012345', room: 'GP-101', keywords: ['fever', 'cold', 'flu', 'general', 'cough'] }
-];
+// Twilio credentials from environment variables for security.
+// Replace with your actual credentials.
+const accountSid = process.env.TWILIO_ACCOUNT_SID || 'ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+const authToken = process.env.TWILIO_AUTH_TOKEN || 'your_auth_token';
+const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER || '+15017122661'; // Your Twilio phone number
 
-// Middleware to parse JSON bodies
+const client = new twilio(accountSid, authToken);
+
+// In-memory store for demonstration purposes. In a production app, use a database.
+const otpStore = {};
+
+// Enable CORS for all routes to allow the frontend to access the server.
+app.use(cors());
 app.use(express.json());
 
-// Serve the HTML file for the root URL
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+// Endpoint to send an OTP to a phone number
+app.post('/api/send-otp', async (req, res) => {
+    const { phone } = req.body;
 
-// Endpoint for booking an appointment
-app.post('/api/book', (req, res) => {
-    const { name, issue, date } = req.body;
-
-    if (!name || !issue || !date) {
-        return res.status(400).json({ error: 'Missing required fields: name, issue, or date' });
+    if (!phone) {
+        return res.status(400).json({ error: 'Phone number is required.' });
     }
 
-    const lowerCaseIssue = issue.toLowerCase();
-    const assignedDoctor = doctors.find(d => d.keywords.some(keyword => lowerCaseIssue.includes(keyword))) || doctors.find(d => d.department === 'General Practice');
+    // Generate a 6-digit random OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const appointment = {
-        name,
-        issue,
-        date,
-        department: assignedDoctor.department,
-        doctor: assignedDoctor.doctor,
-        contact: assignedDoctor.contact,
-        room: assignedDoctor.room
-    };
+    // Store the OTP with the phone number
+    otpStore[phone] = otp;
+    console.log(`Generated OTP for ${phone}: ${otp}`);
 
-    res.status(200).json({
-        message: 'Appointment booked successfully',
-        appointment: appointment
-    });
+    try {
+        // In a real application, you would uncomment this to send the OTP via Twilio.
+        // const message = await client.messages.create({
+        //     body: `Your hospital appointment verification code is: ${otp}`,
+        //     from: twilioPhoneNumber,
+        //     to: phone,
+        // });
+        // console.log(`Message SID: ${message.sid}`);
+
+        // For this demonstration, we just respond with the OTP
+        res.status(200).json({ success: true, otp: otp, message: 'OTP sent (for development).' });
+
+    } catch (error) {
+        console.error('Error sending OTP:', error);
+        res.status(500).json({ error: 'Failed to send OTP.' });
+    }
 });
 
 // Start the server
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`Server is listening on port ${port}`);
 });
