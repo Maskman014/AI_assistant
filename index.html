@@ -1,186 +1,641 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CityCare Hospital - Appointment Booking</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f5f5f5;
-      color: #333;
-    }
-    header {
-      background: #0066cc;
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
-    .container {
-      max-width: 700px;
-      margin: 20px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-    h2 {
-      color: #0066cc;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      background: #0066cc;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #004999;
-    }
-    .letter {
-      display: none;
-      margin-top: 30px;
-      padding: 20px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      background: #fafafa;
-    }
-    .letter h3 {
-      text-align: center;
-      color: #0066cc;
-    }
-    .meta {
-      margin-top: 15px;
-      padding-left: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CityCare Hospital</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2/dist/email.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e0f2fe;
+            background-image: linear-gradient(to bottom right, #f8fcfd, #e0f2fe);
+        }
+        .page {
+            display: none;
+        }
+        .active {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            border-radius: 12px;
+            border: 1px solid #d1d5db;
+            background-color: #f9fafb;
+            transition: all 0.3s ease;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        /* New, smaller doctor card styles */
+        .doctor-card {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 6px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .doctor-card:hover {
+            background-color: #f1f5f9;
+            transform: translateY(-2px);
+        }
+        .doctor-card.selected {
+            background-color: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            transform: translateX(0);
+        }
+        .doctor-select-box {
+            position: relative;
+        }
+        .doctor-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 8px;
+            background-color: white;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            max-height: 250px;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .doctor-dropdown::-webkit-scrollbar {
+            display: none;
+        }
+        .doctor-dropdown.show {
+            display: block;
+        }
+        .doctor-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            background-color: #f9fafb;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        .doctor-display:focus, .doctor-display:hover {
+            border-color: #3b82f6;
+        }
+        .error-message, .success-message, .warning-message {
+            margin-top: 1rem;
+            text-align: center;
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 12px;
+        }
+        .error-message {
+            color: #ef4444;
+            background-color: #fee2e2;
+        }
+        .success-message {
+            color: #22c55e;
+            background-color: #dcfce7;
+        }
+        .warning-message {
+            color: #d97706;
+            background-color: #fef3c7;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
-<body>
-  <header>
-    <h1>CityCare Multispeciality Hospital</h1>
-    <p>123 Health Street, Wellness City • +91-98765-43210</p>
-  </header>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
-  <div class="container">
-    <h2>Book an Appointment</h2>
-    <form id="appointmentForm" onsubmit="event.preventDefault(); onBook();">
-      <label for="name">Full Name:</label>
-      <input type="text" id="name" required />
+    <div id="app" class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-2xl transform transition-transform duration-500">
 
-      <label for="contact">Contact Number:</label>
-      <input type="text" id="contact" required />
+        <!-- Page 1: Patient Details -->
+        <div id="page1" class="page active">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Welcome to CityCare Hospital</h2>
+            <p class="text-center text-gray-600 mb-8">Please provide your details to get started.</p>
+            <form id="patient-details-form" class="space-y-6">
+                <div>
+                    <label for="patient-name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input type="text" id="patient-name" name="patient-name" class="form-input mt-1" required>
+                </div>
+                <div>
+                    <label for="patient-email" class="block text-sm font-medium text-gray-700">Email Address (Optional)</label>
+                    <input type="email" id="patient-email" name="patient-email" class="form-input mt-1">
+                </div>
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" class="form-input mt-1" required>
+                </div>
+                <div class="text-center">
+                    <button type="button" id="send-otp-btn" class="btn-primary w-full">Send OTP</button>
+                </div>
+            </form>
+        </div>
 
-      <label for="issue">Health Issue / Symptoms:</label>
-      <textarea id="issue" rows="3" required></textarea>
+        <!-- Page 1a: OTP Verification -->
+        <div id="page-otp" class="page">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Verify Your Phone Number</h2>
+            <p id="otp-sent-message" class="text-center text-gray-600 mb-8">An OTP has been sent to your phone. Please enter it below.</p>
+            <div id="otp-display-message" class="bg-blue-100 text-blue-800 p-3 rounded-lg text-center font-medium mb-4"></div>
+            <form id="otp-form" class="space-y-6">
+                <div>
+                    <label for="otp-input" class="block text-sm font-medium text-gray-700">Enter OTP</label>
+                    <input type="text" id="otp-input" name="otp-input" class="form-input mt-1" required>
+                    <div id="otp-error-message" class="error-message hidden">Invalid OTP. Please try again.</div>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn-primary w-full">Verify & Proceed</button>
+                </div>
+            </form>
+        </div>
 
-      <label for="date">Preferred Date:</label>
-      <input type="date" id="date" required />
+        <!-- Page 2: Appointment Booking Form -->
+        <div id="page2" class="page">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Book an Appointment</h2>
+            <form id="appointment-form" class="space-y-6">
+                <div>
+                    <label for="health-issue" class="block text-sm font-medium text-gray-700">Health Issue/Symptoms</label>
+                    <textarea id="health-issue" name="health-issue" class="form-input mt-1 h-24" placeholder="e.g., flu, fever, cough, stomach pain..." required></textarea>
+                </div>
+                
+                <div id="ai-suggestion-area" class="mt-4 hidden">
+                    <div class="flex items-center space-x-2 text-blue-600 text-sm font-semibold p-2 bg-blue-50 rounded-lg">
+                        <div class="loading-spinner hidden" id="loading-spinner"></div>
+                        <span id="ai-suggestion-text"></span>
+                    </div>
+                </div>
 
-      <label for="time">Preferred Time:</label>
-      <input type="time" id="time" />
+                <div class="doctor-select-box relative mt-6">
+                    <label for="doctor-select" class="block text-sm font-medium text-gray-700 mb-2">Select a Doctor:</label>
+                    <div id="doctor-display" class="doctor-display">
+                        <span id="selected-doctor-text" class="text-gray-500">Choose a doctor...</span>
+                        <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200" id="dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div id="doctor-dropdown" class="doctor-dropdown">
+                        <div id="doctors-list" class="p-2">
+                            <!-- Doctor cards will be dynamically populated here -->
+                        </div>
+                    </div>
+                </div>
+                <div id="no-doctors-found" class="warning-message hidden mt-4">No doctors found for your issue. Please select one manually from the list above.</div>
+                <div id="doctor-selection-error" class="error-message hidden">Please select a doctor to book your appointment.</div>
 
-      <button type="submit">Book Appointment</button>
-    </form>
+                <input type="hidden" id="selected-doctor-input" name="doctor-name">
 
-    <div class="letter" id="letter">
-      <h3 style="text-align: left; margin-bottom: 5px;">CityCare Multispeciality Hospital</h3>
-      <p style="text-align: left; font-size: 14px; margin-top: 0;">123 Health Street, Wellness City</p>
-      <h3>Appointment Confirmation Letter</h3>
-      <p>Date: <span id="letterDate"></span></p>
-      <p>To, <span id="letterName"></span></p>
-      <p>Dear <span id="letterName2"></span>,</p>
-      <p>We are pleased to confirm your appointment at CityCare Multispeciality Hospital.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                        <label for="appointment-date" class="block text-sm font-medium text-gray-700">Preferred Date</label>
+                        <input type="date" id="appointment-date" name="appointment-date" class="form-input mt-1" required>
+                    </div>
+                    <div>
+                        <label for="appointment-time" class="block text-sm font-medium text-gray-700">Preferred Time</label>
+                        <input type="time" id="appointment-time" name="appointment-time" class="form-input mt-1" required>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn-primary w-full">Book Appointment</button>
+                </div>
+            </form>
+        </div>
 
-      <div class="meta">
-        <p><strong>Patient Name:</strong> <span id="metaName"></span></p>
-        <p><strong>Contact:</strong> <span id="metaContact"></span></p>
-        <p><strong>Health Issue:</strong> <span id="metaIssue"></span></p>
-        <p><strong>Assigned Specialist:</strong> <span id="metaDoctor"></span></p>
-        <p><strong>Department Contact:</strong> <span id="metaDeptContact"></span></p>
-        <p><strong>Consulting Room:</strong> <span id="metaRoom"></span></p>
-        <p><strong>Appointment Date & Time:</strong> <span id="metaDateTime"></span></p>
-      </div>
+        <!-- Page 3: Appointment Confirmation Letter -->
+        <div id="page3" class="page p-6 print:p-0">
+            <div class="bg-white p-8 rounded-lg shadow-xl print:shadow-none print:p-0">
+                <header class="text-center mb-8 border-b-2 border-blue-100 pb-4">
+                    <h1 class="text-4xl font-bold text-gray-800">CityCare Hospital</h1>
+                    <p class="text-gray-600 text-lg mt-2">Leading with care, serving with trust.</p>
+                </header>
 
-      <p>Please carry a valid photo ID and arrive 15 minutes early.</p>
-      <p>Sincerely,<br />Hospital Administration</p>
+                <main class="space-y-6">
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold text-gray-800">Confirmation of Appointment</h2>
+                        <p class="text-sm text-gray-500 mt-1">This letter confirms your scheduled appointment. Please keep it for your records.</p>
+                    </div>
+
+                    <div class="p-6 bg-blue-50 rounded-lg">
+                        <h3 class="font-bold text-blue-700 mb-2">Appointment Details</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div><strong class="text-gray-800">Date:</strong> <span id="confirm-date"></span></div>
+                            <div><strong class="text-gray-800">Time:</strong> <span id="confirm-time"></span></div>
+                            <div><strong class="text-gray-800">Reference No:</strong> <span id="confirm-ref"></span></div>
+                            <div><strong class="text-gray-800">Status:</strong> Confirmed</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="p-6 bg-gray-50 rounded-lg">
+                            <h3 class="font-bold text-gray-700 mb-2">Patient Information</h3>
+                            <div class="text-sm space-y-1">
+                                <div><strong class="text-gray-800">Full Name:</strong> <span id="confirm-name"></span></div>
+                                <div><strong class="text-gray-800">Phone:</strong> <span id="confirm-phone"></span></div>
+                                <div><strong class="text-gray-800">Email:</strong> <span id="confirm-email"></span></div>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-gray-50 rounded-lg">
+                            <h3 class="font-bold text-gray-700 mb-2">Doctor's Information</h3>
+                            <div class="text-sm space-y-1">
+                                <div><strong class="text-gray-800">Doctor Name:</strong> <span id="confirm-doctor-name"></span></div>
+                                <div><strong class="text-gray-800">Specialty:</strong> <span id="confirm-doctor-specialty"></span></div>
+                                <div><strong class="text-gray-800">Experience:</strong> <span id="confirm-doctor-experience"></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-gray-50 rounded-lg">
+                        <h3 class="font-bold text-gray-700 mb-2">Medical Information</h3>
+                        <div class="text-sm space-y-1">
+                             <div><strong class="text-gray-800">Reason for Visit:</strong> <span id="confirm-issue"></span></div>
+                        </div>
+                    </div>
+                </main>
+
+                <footer class="text-center text-sm text-gray-500 mt-8 pt-4 border-t-2 border-gray-100">
+                    <p>123 Medical Center Drive, Healthville, CA 12345 | P: (555) 123-4567 | E: contact@citycare.com</p>
+                    <p class="mt-2">Please arrive 15 minutes prior to your appointment time. We look forward to providing you with the best care.</p>
+                </footer>
+            </div>
+
+            <div class="text-center mt-6 print:hidden">
+                <button onclick="window.print()" class="btn-primary">Print Letter</button>
+            </div>
+            <div id="email-status" class="mt-4"></div>
+        </div>
     </div>
-  </div>
 
-  <script>
-    const backendUrl = "https://ai-assistant-d64k.onrender.com";
+    <!-- Custom Modal for Alerts -->
+    <div id="custom-modal" class="modal">
+        <div class="modal-content rounded-xl shadow-lg border-2 border-gray-200">
+            <h4 id="modal-title" class="text-xl font-semibold mb-4 text-gray-800"></h4>
+            <p id="modal-message" class="text-gray-600 mb-6"></p>
+            <button id="modal-ok-btn" class="btn-primary">OK</button>
+        </div>
+    </div>
 
-    function combineToISO(dateStr, timeStr) {
-      if (!dateStr) return null;
-      const time = timeStr && timeStr.length ? timeStr : "09:00";
-      return `${dateStr}T${time}:00`;
-    }
+    <script>
+        emailjs.init('BDXkKuBPmhxlU95bF');
 
-    async function onBook() {
-      const name = document.getElementById("name").value.trim();
-      const contact = document.getElementById("contact").value.trim();
-      const issue  = document.getElementById("issue").value.trim();
-      const dateV  = document.getElementById("date").value;
-      const timeV  = document.getElementById("time").value;
+        const pages = ['page1', 'page-otp', 'page2', 'page3'];
+        let currentPage = 0;
 
-      if (!name || !contact || !issue || !dateV) {
-        alert("Please fill all required fields.");
-        return;
-      }
+        const doctors = [
+            { name: 'Dr. Evelyn Reed', degree: 'MD, PhD', experience: 15, specialty: ['cardiology', 'heart disease', 'hypertension', 'arrhythmia'], rating: 4.8 },
+            { name: 'Dr. Liam Chen', degree: 'MBBS, FRCS', experience: 10, specialty: ['oncology', 'cancer', 'tumors', 'chemotherapy', 'radiation'], rating: 4.9 },
+            { name: 'Dr. Sofia Garcia', degree: 'DO', experience: 7, specialty: ['pediatrics', 'child health', 'infant care', 'immunizations', 'growth'], rating: 5.0 },
+            { name: 'Dr. Michael Adebayo', degree: 'MD', experience: 20, specialty: ['neurology', 'brain', 'nervous system', 'headaches', 'migraines', 'stroke'], rating: 4.7 },
+            { name: 'Dr. Anya Petrova', degree: 'MD, FACS', experience: 12, specialty: ['dermatology', 'skin', 'rashes', 'acne', 'eczema', 'psoriasis'], rating: 4.6 },
+            { name: 'Dr. Noah Patel', degree: 'MBBS', experience: 8, specialty: ['gastroenterology', 'stomach', 'digestive issues', 'intestines', 'acid reflux', 'IBS'], rating: 4.9 },
+            { name: 'Dr. Chloe Dubois', degree: 'MD', experience: 18, specialty: ['orthopedics', 'bones', 'joints', 'fractures', 'arthritis', 'sports injuries'], rating: 4.5 },
+            { name: 'Dr. David Lee', degree: 'MD, MPH', experience: 14, specialty: ['endocrinology', 'diabetes', 'hormones', 'thyroid', 'metabolism', 'adrenal'], rating: 4.8 },
+            { name: 'Dr. Isabelle Rossi', degree: 'MD', experience: 11, specialty: ['gynecology', 'women\'s health', 'prenatal care', 'menstruation'], rating: 5.0 },
+            { name: 'Dr. Ethan Miller', degree: 'MD', experience: 9, specialty: ['urology', 'urinary tract', 'kidneys', 'bladder', 'prostate'], rating: 4.6 },
+            { name: 'Dr. Olivia Kim', degree: 'MBBS, DTMH', experience: 16, specialty: ['infectious diseases', 'HIV', 'AIDS', 'COVID', 'flu', 'viruses', 'bacteria'], rating: 4.9 },
+            { name: 'Dr. Benjamin Carter', degree: 'MD', experience: 13, specialty: ['pulmonology', 'lungs', 'respiratory', 'asthma', 'bronchitis', 'COPD', 'cold', 'cough', 'sinus'], rating: 4.7 },
+            { name: 'Dr. Maya Singh', degree: 'DO', experience: 6, specialty: ['ophthalmology', 'eyes', 'vision', 'cataracts', 'glaucoma'], rating: 4.8 },
+            { name: 'Dr. Jacob Williams', degree: 'MD', experience: 10, specialty: ['rheumatology', 'arthritis', 'autoimmune diseases', 'lupus', 'fibromyalgia'], rating: 4.9 },
+            { name: 'Dr. Chloe Green', degree: 'MD', experience: 5, specialty: ['general practice', 'family medicine', 'check-up', 'general health', 'fever', 'cold', 'flu', 'sinus'], rating: 4.7 },
+            { name: 'Dr. Daniel Rodriguez', degree: 'MD', experience: 17, specialty: ['ent', 'ear', 'nose', 'throat', 'sinus', 'allergies'], rating: 4.6 },
+            { name: 'Dr. Hannah Foster', degree: 'MD, PhD', experience: 22, specialty: ['psychiatry', 'mental health', 'anxiety', 'depression', 'bipolar'], rating: 5.0 },
+            { name: 'Dr. Mark Thompson', degree: 'MD', experience: 9, specialty: ['nephrology', 'kidneys', 'kidney stones', 'kidney disease'], rating: 4.7 },
+            { name: 'Dr. Jessica Lee', degree: 'MD', experience: 14, specialty: ['allergy and immunology', 'allergies', 'asthma', 'immune system', 'hives'], rating: 4.9 },
+            { name: 'Dr. Peter Jones', degree: 'MD', experience: 25, specialty: ['general surgery', 'surgery', 'appendectomy', 'gallbladder'], rating: 4.8 },
+        ];
+        
+        const aiRecommendations = {
+            'cardiology': 'Dr. Evelyn Reed',
+            'oncology': 'Dr. Liam Chen',
+            'pediatrics': 'Dr. Sofia Garcia',
+            'neurology': 'Dr. Michael Adebayo',
+            'dermatology': 'Dr. Anya Petrova',
+            'gastroenterology': 'Dr. Noah Patel',
+            'orthopedics': 'Dr. Chloe Dubois',
+            'endocrinology': 'Dr. David Lee',
+            'gynecology': 'Dr. Isabelle Rossi',
+            'urology': 'Dr. Ethan Miller',
+            'infectious diseases': 'Dr. Olivia Kim',
+            'pulmonology': 'Dr. Benjamin Carter',
+            'ophthalmology': 'Dr. Maya Singh',
+            'rheumatology': 'Dr. Jacob Williams',
+            'general practice': 'Dr. Chloe Green',
+            'ent': 'Dr. Daniel Rodriguez',
+            'psychiatry': 'Dr. Hannah Foster',
+            'nephrology': 'Dr. Mark Thompson',
+            'allergy and immunology': 'Dr. Jessica Lee',
+            'general surgery': 'Dr. Peter Jones'
+        };
 
-      const isoDate = combineToISO(dateV, timeV);
+        let generatedOTP = '';
+        let selectedDoctor = null;
 
-      try {
-        const resp = await fetch(`${backendUrl}/api/book`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, issue, date: isoDate })
-        });
-
-        const data = await resp.json();
-        if (!resp.ok) {
-          alert(data.error || "Booking failed.");
-          return;
+        function showPage(pageId) {
+            pages.forEach(id => {
+                document.getElementById(id).classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
         }
 
-        const appt = data.appointment || data;
+        // Custom Modal Logic
+        function showModal(title, message) {
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            modal.style.display = 'flex';
+        }
 
-        // Fill letter
-        document.getElementById("letterDate").textContent = new Date().toLocaleDateString();
-        document.getElementById("letterName").textContent = name;
-        document.getElementById("letterName2").textContent = name;
+        document.getElementById('modal-ok-btn').addEventListener('click', () => {
+            document.getElementById('custom-modal').style.display = 'none';
+        });
 
-        document.getElementById("metaName").textContent = name;
-        document.getElementById("metaContact").textContent = contact;
-        document.getElementById("metaIssue").textContent = issue;
+        // Page 1 Logic
+        document.getElementById('send-otp-btn').addEventListener('click', function() {
+            const phoneInput = document.getElementById('phone');
+            const nameInput = document.getElementById('patient-name');
 
-        document.getElementById("metaDoctor").textContent = `${appt.doctor} (${appt.department})`;
-        document.getElementById("metaDeptContact").textContent = appt.contact;
-        document.getElementById("metaRoom").textContent = appt.room;
-        document.getElementById("metaDateTime").textContent = new Date(isoDate).toLocaleString();
+            if (!nameInput.value || !phoneInput.value) {
+                showModal('Validation Error', 'Please fill out all required fields.');
+                return;
+            }
 
-        document.getElementById("letter").style.display = "block";
-        document.getElementById("letter").scrollIntoView({ behavior: "smooth" });
+            generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+            document.getElementById('otp-display-message').textContent = `Your OTP is: ${generatedOTP}`;
+            showPage('page-otp');
+        });
 
-      } catch (err) {
-        console.error(err);
-        alert("Could not reach the server. Make sure backend is running.");
-      }
-    }
-  </script>
+        // OTP Page Logic
+        document.getElementById('otp-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const otpInput = document.getElementById('otp-input').value;
+            const otpErrorMessage = document.getElementById('otp-error-message');
+
+            if (otpInput === generatedOTP) {
+                otpErrorMessage.classList.add('hidden');
+                populateDoctorList(doctors);
+                showPage('page2');
+            } else {
+                otpErrorMessage.classList.remove('hidden');
+            }
+        });
+
+        // Page 2 Logic
+        const healthIssueInput = document.getElementById('health-issue');
+        const doctorsListContainer = document.getElementById('doctors-list');
+        const noDoctorsFoundMessage = document.getElementById('no-doctors-found');
+        const doctorDropdown = document.getElementById('doctor-dropdown');
+        const selectedDoctorText = document.getElementById('selected-doctor-text');
+        const doctorDisplay = document.getElementById('doctor-display');
+        const dropdownArrow = document.getElementById('dropdown-arrow');
+        const aiSuggestionArea = document.getElementById('ai-suggestion-area');
+        const aiSuggestionText = document.getElementById('ai-suggestion-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('appointment-date').min = today;
+        document.getElementById('appointment-date').value = today;
+
+        function populateDoctorList(doctorArray) {
+            doctorsListContainer.innerHTML = '';
+            
+            doctorArray.forEach(doctor => {
+                const card = document.createElement('div');
+                card.classList.add('doctor-card');
+                card.dataset.name = doctor.name;
+                if (selectedDoctor && selectedDoctor.name === doctor.name) {
+                    card.classList.add('selected');
+                }
+                card.innerHTML = `
+                    <div class="flex items-center justify-between text-sm">
+                        <div class="font-bold text-gray-800">${doctor.name} <span class="text-xs text-gray-500 font-normal">(${doctor.degree})</span></div>
+                        <div class="text-xs text-gray-800 font-semibold flex items-center ml-4">
+                            <svg class="w-3 h-3 text-yellow-400 mr-0.5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.785.57-1.84-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"></path></svg>
+                            ${doctor.rating}/5
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        ${doctor.specialty.join(', ')} • ${doctor.experience} years
+                    </div>
+                `;
+                card.addEventListener('click', () => {
+                    selectedDoctor = doctor;
+                    selectedDoctorText.textContent = doctor.name;
+                    document.getElementById('selected-doctor-input').value = doctor.name;
+                    doctorDropdown.classList.remove('show');
+                    dropdownArrow.classList.remove('rotate-180');
+                    document.querySelectorAll('.doctor-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                });
+                doctorsListContainer.appendChild(card);
+            });
+        }
+
+        async function getDoctorRecommendation(issue) {
+            loadingSpinner.classList.remove('hidden');
+            aiSuggestionArea.classList.remove('hidden');
+            aiSuggestionText.textContent = 'Analyzing your symptoms...';
+
+            const userQuery = `I have symptoms like: ${issue}. What is the most relevant medical specialty? Give me only the specialty name from this list: ${Object.keys(aiRecommendations).join(', ')}. Respond with ONLY the single specialty name and nothing else.`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                generationConfig: {
+                    responseMimeType: "text/plain"
+                },
+                model: "gemini-2.5-flash-preview-05-20"
+            };
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            try {
+                let response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const recommendedSpecialty = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toLowerCase();
+                
+                if (recommendedSpecialty && aiRecommendations[recommendedSpecialty]) {
+                    return aiRecommendations[recommendedSpecialty];
+                } else {
+                    return null;
+                }
+            } catch (error) {
+                console.error('Failed to get AI recommendation:', error);
+                return null;
+            } finally {
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        let timeout = null;
+        healthIssueInput.addEventListener('input', () => {
+            clearTimeout(timeout);
+            const issue = healthIssueInput.value.trim();
+            if (issue.length > 3) {
+                aiSuggestionArea.classList.remove('hidden');
+                loadingSpinner.classList.remove('hidden');
+                aiSuggestionText.textContent = 'Analyzing your symptoms...';
+                timeout = setTimeout(async () => {
+                    const recommendedDoctorName = await getDoctorRecommendation(issue);
+                    if (recommendedDoctorName) {
+                        const recommendedDoctor = doctors.find(doc => doc.name === recommendedDoctorName);
+                        if (recommendedDoctor) {
+                            selectedDoctor = recommendedDoctor;
+                            selectedDoctorText.textContent = `${recommendedDoctor.name} (AI Recommended)`;
+                            document.getElementById('selected-doctor-input').value = recommendedDoctor.name;
+                            aiSuggestionText.textContent = `Based on your symptoms, we recommend ${recommendedDoctor.name}.`;
+                            // Visually select the card
+                            document.querySelectorAll('.doctor-card').forEach(card => card.classList.remove('selected'));
+                            const cardToSelect = document.querySelector(`.doctor-card[data-name="${recommendedDoctor.name}"]`);
+                            if (cardToSelect) {
+                                cardToSelect.classList.add('selected');
+                            }
+                        } else {
+                            aiSuggestionText.textContent = 'Could not find a matching doctor. Please select manually.';
+                        }
+                    } else {
+                        aiSuggestionText.textContent = 'Could not find a matching doctor. Please select manually.';
+                    }
+                }, 1000); // Debounce to prevent too many API calls
+            } else {
+                aiSuggestionArea.classList.add('hidden');
+                selectedDoctor = null;
+                selectedDoctorText.textContent = 'Choose a doctor...';
+            }
+        });
+
+
+        doctorDisplay.addEventListener('click', () => {
+            populateDoctorList(doctors); // Populate the full list on click
+            doctorDropdown.classList.toggle('show');
+            dropdownArrow.classList.toggle('rotate-180');
+        });
+
+        document.getElementById('appointment-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const patientName = document.getElementById('patient-name').value;
+            const patientEmail = document.getElementById('patient-email').value;
+            const healthIssue = document.getElementById('health-issue').value;
+            const appointmentDate = document.getElementById('appointment-date').value;
+            const appointmentTime = document.getElementById('appointment-time').value;
+
+            if (!selectedDoctor) {
+                document.getElementById('doctor-selection-error').classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('doctor-selection-error').classList.add('hidden');
+            }
+
+            const templateParams = {
+                patient_name: patientName,
+                patient_phone: document.getElementById('phone').value,
+                patient_email: patientEmail,
+                issue: healthIssue,
+                doctor_name: selectedDoctor.name,
+                appointment_date: appointmentDate,
+                appointment_time: appointmentTime,
+            };
+
+            const emailStatus = document.getElementById('email-status');
+            const serviceID = 'service_avbq0sb';
+            const templateID = 'template_p3x0ftb';
+            const publicKey = 'BDXkKuBPmhxlU95bF';
+
+            if (patientEmail) {
+                emailjs.send(serviceID, templateID, templateParams, publicKey)
+                    .then(function(response) {
+                        console.log('SUCCESS!', response.status, response.text);
+                        emailStatus.textContent = 'A confirmation email has been sent!';
+                        emailStatus.className = 'success-message';
+                    }, function(error) {
+                        console.log('FAILED...', error);
+                        emailStatus.textContent = `Email not sent due to an error.`;
+                        emailStatus.className = 'error-message';
+                    });
+            } else {
+                emailStatus.textContent = 'No email provided. Email confirmation skipped.';
+                emailStatus.className = 'warning-message';
+            }
+
+            document.getElementById('confirm-name').textContent = patientName;
+            document.getElementById('confirm-email').textContent = patientEmail || 'Not Provided';
+            document.getElementById('confirm-phone').textContent = document.getElementById('phone').value;
+            document.getElementById('confirm-issue').textContent = healthIssue;
+            document.getElementById('confirm-date').textContent = appointmentDate;
+            document.getElementById('confirm-time').textContent = appointmentTime;
+            document.getElementById('confirm-ref').textContent = `APPT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+            document.getElementById('confirm-doctor-name').textContent = selectedDoctor.name;
+            document.getElementById('confirm-doctor-specialty').textContent = selectedDoctor.specialty.join(', ');
+            document.getElementById('confirm-doctor-experience').textContent = `${selectedDoctor.experience} years`;
+
+            showPage('page3');
+        });
+
+        // Close dropdown if user clicks outside
+        window.addEventListener('click', (e) => {
+            if (!doctorDisplay.contains(e.target) && !doctorDropdown.contains(e.target)) {
+                doctorDropdown.classList.remove('show');
+                dropdownArrow.classList.remove('rotate-180');
+            }
+        });
+    </script>
 </body>
 </html>
