@@ -2,19 +2,19 @@ const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 
-// IMPORTANT: The path is now a relative path, meaning it looks for the file
-// in the same folder as this server.js file. This is the correct way
-// to fix the "Cannot find module" error.
-const serviceAccountKeyPath = './appointment-booking-app-1188e-firebase-adminsdk-fbsvc-12af8e6c65.json';
+// NEW: This code now reads the Firebase key from a secure environment variable.
+// This is the correct and secure way to handle secrets in production.
+const firebaseConfig = process.env.FIREBASE_CONFIG;
 
 // Initialize Firebase Admin SDK
 try {
-  const serviceAccount = require(serviceAccountKeyPath);
+  // Parse the JSON string from the environment variable
+  const serviceAccount = JSON.parse(firebaseConfig);
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
 } catch (error) {
-  console.error("Failed to load Firebase service account key. Please check the path and file.");
+  console.error("Failed to load Firebase service account key. Please check the FIREBASE_CONFIG environment variable.");
   console.error("Error:", error);
   // Exit the process if the key is not found, as the app cannot function.
   process.exit(1);
@@ -28,7 +28,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// NEW: A simple test route to confirm the server is working.
+// A simple test route to confirm the server is working.
 app.get('/', (req, res) => {
   res.send('<h1>Server is running!</h1><p>The backend is live and ready for API requests.</p>');
 });
