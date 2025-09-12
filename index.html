@@ -4,7 +4,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CityCare Hospital</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2/dist/email.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
@@ -169,6 +168,9 @@
         <div id="page1" class="page active">
             <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Welcome to CityCare Hospital</h2>
             <p class="text-center text-gray-600 mb-8">Please provide your details to get started.</p>
+            <div id="user-id-display" class="bg-blue-100 text-blue-800 p-3 rounded-lg text-center font-medium mb-4 hidden">
+                Your User ID: <span id="user-id-text"></span>
+            </div>
             <form id="patient-details-form" class="space-y-6">
                 <div>
                     <label for="patient-name" class="block text-sm font-medium text-gray-700">Full Name</label>
@@ -225,7 +227,7 @@
                     <label for="doctor-select" class="block text-sm font-medium text-gray-700 mb-2">Select a Doctor:</label>
                     <div id="doctor-display" class="doctor-display">
                         <span id="selected-doctor-text" class="text-gray-500">Choose a doctor...</span>
-                        <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200" id="dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200" id="dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                     <div id="doctor-dropdown" class="doctor-dropdown">
                         <div id="doctors-list" class="p-2">
@@ -283,8 +285,8 @@
                             <h3 class="font-bold text-gray-700 mb-2">Patient Information</h3>
                             <div class="text-sm space-y-1">
                                 <div><strong class="text-gray-800">Full Name:</strong> <span id="confirm-name"></span></div>
-                                <div><strong class="text-gray-800">Phone:</strong> <span id="confirm-phone"></span></div>
                                 <div><strong class="text-gray-800">Email:</strong> <span id="confirm-email"></span></div>
+                                <div><strong class="text-gray-800">Phone:</strong> <span id="confirm-phone"></span></div>
                             </div>
                         </div>
                         <div class="p-6 bg-gray-50 rounded-lg">
@@ -303,6 +305,13 @@
                              <div><strong class="text-gray-800">Reason for Visit:</strong> <span id="confirm-issue"></span></div>
                         </div>
                     </div>
+
+                    <div id="appointments-list-container" class="mt-8">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">All Appointments</h3>
+                        <div id="appointments-list" class="space-y-4">
+                            <!-- Appointments will be rendered here -->
+                        </div>
+                    </div>
                 </main>
 
                 <footer class="text-center text-sm text-gray-500 mt-8 pt-4 border-t-2 border-gray-100">
@@ -314,7 +323,6 @@
             <div class="text-center mt-6 print:hidden">
                 <button onclick="window.print()" class="btn-primary">Print Letter</button>
             </div>
-            <div id="email-status" class="mt-4"></div>
         </div>
     </div>
 
@@ -327,12 +335,46 @@
         </div>
     </div>
 
-    <script>
-        emailjs.init('BDXkKuBPmhxlU95bF');
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        let db, auth;
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            // Authenticate the user
+            (async () => {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                document.getElementById('user-id-text').textContent = auth.currentUser.uid;
+                document.getElementById('user-id-display').classList.remove('hidden');
+                
+                // Set up real-time listener for appointments
+                setupRealtimeAppointments();
+            })();
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            showModal("Error", "Failed to connect to the database. Please try again.");
+        }
+
 
         const pages = ['page1', 'page-otp', 'page2', 'page3'];
         let currentPage = 0;
-
+        let generatedOTP = '';
+        
         const doctors = [
             { name: 'Dr. Evelyn Reed', degree: 'MD, PhD', experience: 15, specialty: ['cardiology', 'heart disease', 'hypertension', 'arrhythmia'], rating: 4.8 },
             { name: 'Dr. Liam Chen', degree: 'MBBS, FRCS', experience: 10, specialty: ['oncology', 'cancer', 'tumors', 'chemotherapy', 'radiation'], rating: 4.9 },
@@ -379,7 +421,6 @@
             'general surgery': 'Dr. Peter Jones'
         };
 
-        let generatedOTP = '';
         let selectedDoctor = null;
 
         function showPage(pageId) {
@@ -567,11 +608,12 @@
             dropdownArrow.classList.toggle('rotate-180');
         });
 
-        document.getElementById('appointment-form').addEventListener('submit', function(event) {
+        document.getElementById('appointment-form').addEventListener('submit', async function(event) {
             event.preventDefault();
 
             const patientName = document.getElementById('patient-name').value;
             const patientEmail = document.getElementById('patient-email').value;
+            const phone = document.getElementById('phone').value;
             const healthIssue = document.getElementById('health-issue').value;
             const appointmentDate = document.getElementById('appointment-date').value;
             const appointmentTime = document.getElementById('appointment-time').value;
@@ -583,50 +625,46 @@
                 document.getElementById('doctor-selection-error').classList.add('hidden');
             }
 
-            const templateParams = {
-                patient_name: patientName,
-                patient_phone: document.getElementById('phone').value,
-                patient_email: patientEmail,
-                issue: healthIssue,
-                doctor_name: selectedDoctor.name,
-                appointment_date: appointmentDate,
-                appointment_time: appointmentTime,
-            };
+            // Show a loading state while saving to Firestore
+            showModal("Booking Appointment...", "Please wait while we save your appointment.");
 
-            const emailStatus = document.getElementById('email-status');
-            const serviceID = 'service_avbq0sb';
-            const templateID = 'template_p3x0ftb';
-            const publicKey = 'BDXkKuBPmhxlU95bF';
+            try {
+                // Save appointment to Firestore
+                const appointmentData = {
+                    patientName,
+                    patientEmail,
+                    phone,
+                    healthIssue,
+                    appointmentDate,
+                    appointmentTime,
+                    doctorName: selectedDoctor.name,
+                    doctorSpecialty: selectedDoctor.specialty.join(', '),
+                    timestamp: new Date()
+                };
 
-            if (patientEmail) {
-                emailjs.send(serviceID, templateID, templateParams, publicKey)
-                    .then(function(response) {
-                        console.log('SUCCESS!', response.status, response.text);
-                        emailStatus.textContent = 'A confirmation email has been sent!';
-                        emailStatus.className = 'success-message';
-                    }, function(error) {
-                        console.log('FAILED...', error);
-                        emailStatus.textContent = `Email not sent due to an error.`;
-                        emailStatus.className = 'error-message';
-                    });
-            } else {
-                emailStatus.textContent = 'No email provided. Email confirmation skipped.';
-                emailStatus.className = 'warning-message';
+                const appointmentsRef = collection(db, `/artifacts/${appId}/public/data/appointments`);
+                await addDoc(appointmentsRef, appointmentData);
+
+                // Update the confirmation letter UI
+                document.getElementById('confirm-name').textContent = patientName;
+                document.getElementById('confirm-email').textContent = patientEmail || 'Not Provided';
+                document.getElementById('confirm-phone').textContent = phone;
+                document.getElementById('confirm-issue').textContent = healthIssue;
+                document.getElementById('confirm-date').textContent = appointmentDate;
+                document.getElementById('confirm-time').textContent = appointmentTime;
+                document.getElementById('confirm-ref').textContent = `APPT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+                document.getElementById('confirm-doctor-name').textContent = selectedDoctor.name;
+                document.getElementById('confirm-doctor-specialty').textContent = selectedDoctor.specialty.join(', ');
+                document.getElementById('confirm-doctor-experience').textContent = `${selectedDoctor.experience} years`;
+
+                document.getElementById('custom-modal').style.display = 'none';
+                showPage('page3');
+
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                showModal("Error", "Failed to book your appointment. Please try again.");
             }
-
-            document.getElementById('confirm-name').textContent = patientName;
-            document.getElementById('confirm-email').textContent = patientEmail || 'Not Provided';
-            document.getElementById('confirm-phone').textContent = document.getElementById('phone').value;
-            document.getElementById('confirm-issue').textContent = healthIssue;
-            document.getElementById('confirm-date').textContent = appointmentDate;
-            document.getElementById('confirm-time').textContent = appointmentTime;
-            document.getElementById('confirm-ref').textContent = `APPT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-
-            document.getElementById('confirm-doctor-name').textContent = selectedDoctor.name;
-            document.getElementById('confirm-doctor-specialty').textContent = selectedDoctor.specialty.join(', ');
-            document.getElementById('confirm-doctor-experience').textContent = `${selectedDoctor.experience} years`;
-
-            showPage('page3');
         });
 
         // Close dropdown if user clicks outside
@@ -636,6 +674,49 @@
                 dropdownArrow.classList.remove('rotate-180');
             }
         });
+
+        // Function to set up real-time listener for appointments
+        function setupRealtimeAppointments() {
+            if (!db) {
+                return;
+            }
+            const appointmentsRef = collection(db, `/artifacts/${appId}/public/data/appointments`);
+            const q = query(appointmentsRef);
+
+            onSnapshot(q, (querySnapshot) => {
+                const appointments = [];
+                querySnapshot.forEach((doc) => {
+                    appointments.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Sort appointments by timestamp, descending
+                appointments.sort((a, b) => b.timestamp.toDate() - a.timestamp.toDate());
+
+                const appointmentsList = document.getElementById('appointments-list');
+                appointmentsList.innerHTML = '';
+                
+                if (appointments.length === 0) {
+                    appointmentsList.innerHTML = '<p class="text-gray-500 text-center">No appointments booked yet. Be the first!</p>';
+                } else {
+                    appointments.forEach(appointment => {
+                        const appointmentCard = document.createElement('div');
+                        appointmentCard.classList.add('bg-gray-50', 'p-4', 'rounded-lg', 'shadow-sm', 'border', 'border-gray-200');
+                        appointmentCard.innerHTML = `
+                            <div class="text-sm">
+                                <p class="font-bold text-gray-800">${appointment.patientName} <span class="text-xs text-gray-500 font-normal">(${appointment.appointmentDate} at ${appointment.appointmentTime})</span></p>
+                                <p class="text-xs text-gray-600 mt-1">
+                                    <span class="font-semibold">Doctor:</span> ${appointment.doctorName}
+                                </p>
+                                <p class="text-xs text-gray-600 mt-1">
+                                    <span class="font-semibold">Issue:</span> ${appointment.healthIssue}
+                                </p>
+                            </div>
+                        `;
+                        appointmentsList.appendChild(appointmentCard);
+                    });
+                }
+            });
+        }
     </script>
 </body>
 </html>
